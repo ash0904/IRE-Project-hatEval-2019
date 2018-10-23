@@ -117,7 +117,7 @@ for train, test in kfold.split(X_train):
                       metrics=['accuracy'])
 
 
-    tweet2vec.fit(X_train[train], Y_train[train], epochs=10, batch_size=32, validation_split=0.1)
+    tweet2vec.fit(X_train[train], Y_train[train], epochs=10, batch_size=32, validation_split=0.0)
 
 
     scores = tweet2vec.evaluate(X_train[test], Y_train[test], verbose=0)
