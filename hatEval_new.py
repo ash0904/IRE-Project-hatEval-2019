@@ -14,7 +14,7 @@ import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer, PorterStemmer
 from nltk.tokenize import TweetTokenizer
-from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score, roc_auc_score
 from sklearn.externals import joblib
 
 import py_crepe
@@ -90,7 +90,7 @@ def load_ag_data():
     train = train.dropna()
     # train = train.loc[train['HS'] == 1]
 
-    x_train = train['text'].map(lambda x: processTweet(x, remove_swords = False, remove_url = True, 
+    x_train = train['text'].map(lambda x: processTweet(x, remove_swords = False, remove_url = True,
                                 remove_hashtags = False, remove_num = True, stem_tweet = False))
     x_train = np.array(x_train)
 
@@ -99,7 +99,7 @@ def load_ag_data():
 
     test = pd.read_csv('public_development_en/dev_en.tsv', delimiter='\t', encoding='utf-8')
     # test = test.loc[test['HS'] == 1]
-    x_test = test['text'].map(lambda x: processTweet(x, remove_swords = False, remove_url = True, 
+    x_test = test['text'].map(lambda x: processTweet(x, remove_swords = False, remove_url = True,
                                 remove_hashtags = False, remove_num = True, stem_tweet = False))
     x_test = np.array(x_test)
 
@@ -207,6 +207,7 @@ y_test = np.argmax(y_test, axis=1)
 print(precision_score(y_test, y_predict, average=None))
 print(recall_score(y_test, y_predict, average=None))
 print(f1_score(y_test, y_predict, average=None))
+print(roc_auc_score(y_test, y_predict, average=None))
 # acc = 0
 # for i in range(y_predict.shape[0]):
 #     if y_predict[i] == y_test[i]:
