@@ -194,10 +194,7 @@ fold = 1
 
 kfold = KFold(n_splits=10)
 kfold.get_n_splits(x_dataSet)
-# precisionScores = []
-# recallScores = []
-# f1Scores = []
-# roc_aucScores = []
+cvscores = []
 
 for train, test in kfold.split(x_dataSet):
     print("------------------------------------------------------------------------------")
@@ -207,38 +204,15 @@ for train, test in kfold.split(x_dataSet):
     model = py_crepe.create_model(filter_kernels, dense_outputs, maxlen, vocab_size,
                                   nb_filter, cat_output)
 
-    model.fit(x_dataSet[train], y_dataSet[train],
-              validation_data=(x_dataSet[test], y_dataSet[test]), batch_size=batch_size, epochs=nb_epoch, shuffle=True)
+    model.fit(x_dataSet[train], y_dataSet[train], batch_size=batch_size, epochs=nb_epoch, validation_split=0.0)
+    scores = model.evaluate(x_dataSet[test], y_dataSet[test], verbose=0)
 
-
-    y_predict = model.predict(x_dataSet[test], batch_size=None, steps=None)
-
-    y_predict = np.argmax(y_predict, axis=1)
-    y_test = np.argmax(y_dataSet[test], axis=1)
-
-    precision = precision_score(y_test, y_predict, average=None)
-    print("Precision : ", precision)
-    # precisionScores.append(precision)
-
-    recall = recall_score(y_test, y_predict, average=None)
-    print("Recall : ", recall)
-    # recallScores.append(recall)
-
-    f1 = f1_score(y_test, y_predict, average=None)
-    print("F1 : ", f1)
-    # f1Scores.append(f1)
-
-    roc = roc_auc_score(y_test, y_predict, average=None)
-    print("ROC : ", roc)
-    # roc_aucScores.append(roc)
+    cvscores.append(scores[1] * 100)
 
     fold += 1
 
 print("------------------------------------------------------------------------------")
-# print("Precision : %.2f%% (+/- %.2f%%)" % (np.mean(precisionScores)*100, np.std(precisionScores)*100))
-# print("Recall : ",%.2f%% (+/- %.2f%%)" % (np.mean(recallScores)*100, np.std(recallScores)*100))
-# print("F1 : %.2f%% (+/- %.2f%%)" % (np.mean(f1Scores)*100, np.std(f1Scores)*100))
-# print("ROC : %.2f%% (+/- %.2f%%)" % (np.mean(roc_aucScores)*100, np.std(roc_aucScores)*100))
+print("Accuracy : %.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
 # acc = 0
 # for i in range(y_predict.shape[0]):
