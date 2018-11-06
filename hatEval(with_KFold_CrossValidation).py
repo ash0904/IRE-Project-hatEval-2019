@@ -1,24 +1,30 @@
-import re
+
+# coding: utf-8
+
+# In[36]:
+
+
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"]="3"
 import string
-import nltk
+import re
+import pickle
 import numpy as np
 import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer, PorterStemmer
 from nltk.tokenize import TweetTokenizer
-import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"]="3"
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score, roc_auc_score
+from sklearn.externals import joblib
 
-# Keras
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
-from keras.models import Sequential, Model
-from keras.layers import Dense, Flatten, LSTM, Conv1D, MaxPooling1D, Dropout, Activation, Embedding, GRU, Input, Bidirectional
-from keras.layers.embeddings import Embedding
-from keras.regularizers import l2
-from keras.utils import np_utils
+import py_crepe
 
+from keras.utils.np_utils import to_categorical
+from keras.models import load_model
 from sklearn.model_selection import KFold
+
+# In[31]:
+
 
 # functions for cleaning
 def removeStopwords(tokens):
@@ -51,6 +57,9 @@ def stemTweet(tokens):
     return stemmed_words
 
 
+# In[32]:
+
+
 def processTweet(tweet, remove_swords = True, remove_url = True, remove_hashtags = True, remove_num = True, stem_tweet = True):
 #     text = tweet.translate(string.punctuation)   -> to figure out what it does ?
     """
@@ -61,6 +70,8 @@ def processTweet(tweet, remove_swords = True, remove_url = True, remove_hashtags
     if remove_url:
         tweet = removeURL(tweet)
     twtk = TweetTokenizer(strip_handles=True, reduce_len=True)
+    if remove_num:
+        tweet = removeNum(tweet)
     tokens = [w.lower() for w in twtk.tokenize(tweet) if w != "" and w is not None]
     if remove_hashtags:
         tokens = removeHashtags(tokens)
@@ -72,91 +83,166 @@ def processTweet(tweet, remove_swords = True, remove_url = True, remove_hashtags
     return text
 
 
-train_data = pd.read_csv('./public_development_en/train_en.tsv',delimiter='\t',encoding='utf-8')
-# print(list(train_data.columns.values)) #file header
-
-# tweets = train_data['text']
-maxlen = 140
-train_data['text'] = train_data['text'].map(lambda x: processTweet(x))
-vocabulary_size = 30000
-tokenizer = Tokenizer(num_words= vocabulary_size)
-tokenizer.fit_on_texts(train_data['text'])
-X_train = tokenizer.texts_to_sequences(train_data['text'])
-# print(sequences)
-X_train = pad_sequences(X_train, maxlen=maxlen)
-labels = train_data['HS']
-Y_train = np_utils.to_categorical(labels, len(set(labels)))
-V = len(tokenizer.word_index) + 1
+# In[33]:
 
 
-l2_coef = 0.001
+def load_ag_data():
+    train = pd.read_csv('public_development_en/train_en.tsv', delimiter='\t', encoding='utf-8')
+    train = train.dropna()
+    # train = train.loc[train['HS'] == 1]
+
+    x_train = train['text'].map(lambda x: processTweet(x, remove_swords = False, remove_url = True,
+                                remove_hashtags = False, remove_num = True, stem_tweet = False))
+    x_train = np.array(x_train)
+
+    y_train = train['HS']
+    y_train = to_categorical(y_train)
+
+    test = pd.read_csv('public_development_en/dev_en.tsv', delimiter='\t', encoding='utf-8')
+    # test = test.loc[test['HS'] == 1]
+    x_test = test['text'].map(lambda x: processTweet(x, remove_swords = False, remove_url = True,
+                                remove_hashtags = False, remove_num = True, stem_tweet = False))
+    x_test = np.array(x_test)
+
+    y_test = test['HS']
+    y_test = to_categorical(y_test)
+
+    return (x_train, y_train), (x_test, y_test)
+
+
+def encode_data(x, maxlen, vocab):
+    # Iterate over the loaded data and create a matrix of size (len(x), maxlen)
+    # Each character is encoded into a one-hot array later at the lambda layer.
+    # Chars not in the vocab are encoded as -1, into an all zero vector.
+
+    input_data = np.zeros((len(x), maxlen), dtype=np.int)
+    for dix, sent in enumerate(x):
+        counter = 0
+        for c in sent:
+            if counter >= maxlen:
+                pass
+            else:
+                ix = vocab.get(c, -1)  # get index from vocab dictionary, if not in vocab, return -1
+                input_data[dix, counter] = ix
+                counter += 1
+    return input_data
+
+
+def create_vocab_set():
+    # This alphabet is 69 chars vs. 70 reported in the paper since they include two
+    # '-' characters. See https://github.com/zhangxiangxiao/Crepe#issues.
+
+    alphabet = set(list(string.ascii_lowercase) + list(string.digits) +
+                   list(string.punctuation) + ['\n'])
+    vocab_size = len(alphabet)
+    vocab = {}
+    reverse_vocab = {}
+    for ix, t in enumerate(alphabet):
+        vocab[t] = ix
+        reverse_vocab[ix] = t
+
+    return vocab, reverse_vocab, vocab_size, alphabet
+
+
+# In[34]:
+
+
+(x_train, y_train), (x_test, y_test) = load_ag_data()
+x_dataSet = np.append(x_train, x_test, axis = 0)
+y_dataSet = np.append(y_train, y_test, axis = 0)
+
+# In[38]:
+
+np.random.seed(123)  # for reproducibility
+
+# set parameters:
+
+subset = None
+
+# Whether to save model parameters
+save = False
+model_name_path = 'params/crepe_model.json'
+model_weights_path = 'params/crepe_model_weights.h5'
+
+# Maximum length. Longer gets chopped. Shorter gets padded.
+maxlen = 1014
+
+# Model params
+# Filters for conv layers
+nb_filter = 256
+# Number of units in the dense layer
+dense_outputs = 1024
+# Conv layer kernel size
+filter_kernels = [7, 7, 3, 3, 3, 3]
+# Number of units in the final output layer. Number of classes.
+cat_output = 2
+
+# Compile/fit params
+batch_size = 80
+nb_epoch = 20
+
+vocab, reverse_vocab, vocab_size, alphabet = create_vocab_set()
+
+# In[40]:
+
+x_dataSet = encode_data(x_dataSet, maxlen, vocab)
+
+# In[41]:
+
 seed = 10
 fold = 1
 
 kfold = KFold(n_splits=10)
-kfold.get_n_splits(X_train)
-cvscores = []
+kfold.get_n_splits(x_dataSet)
+# precisionScores = []
+# recallScores = []
+# f1Scores = []
+# roc_aucScores = []
 
-for train, test in kfold.split(X_train):
+for train, test in kfold.split(x_dataSet):
     print("------------------------------------------------------------------------------")
     print("FOLD ", fold)
 
-    tweet = Input(shape=(maxlen,), dtype='int32')
-    x = Embedding(V, 128, input_length=maxlen, W_regularizer=l2(l=l2_coef))(tweet)
-    x = Bidirectional(layer=GRU(128, return_sequences=False, 
-                                W_regularizer=l2(l=l2_coef),
-                                b_regularizer=l2(l=l2_coef),
-                                U_regularizer=l2(l=l2_coef)),
-                      merge_mode='sum')(x)
-    x = Dense(len(set(labels)), W_regularizer=l2(l=l2_coef), activation="softmax")(x)
 
-    tweet2vec = Model(inputs=tweet, outputs=x)
+    model = py_crepe.create_model(filter_kernels, dense_outputs, maxlen, vocab_size,
+                                  nb_filter, cat_output)
 
-    tweet2vec.compile(loss='categorical_crossentropy',
-                      optimizer='RMSprop',
-                      metrics=['accuracy'])
+    model.fit(x_dataSet[train], y_dataSet[train],
+              validation_data=(x_dataSet[test], y_dataSet[test]), batch_size=batch_size, epochs=nb_epoch, shuffle=True)
 
 
-    tweet2vec.fit(X_train[train], Y_train[train], epochs=10, batch_size=32, validation_split=0.0)
+    y_predict = model.predict(x_dataSet[test], batch_size=None, steps=None)
 
+    y_predict = np.argmax(y_predict, axis=1)
+    y_test = np.argmax(y_dataSet[test], axis=1)
 
-    scores = tweet2vec.evaluate(X_train[test], Y_train[test], verbose=0)
-    print("%s: %.2f%%" % (tweet2vec.metrics_names[1], scores[1]*100))
-    cvscores.append(scores[1] * 100)
+    precision = precision_score(y_test, y_predict, average=None)
+    print("Precision : ", precision)
+    # precisionScores.append(precision)
+
+    recall = recall_score(y_test, y_predict, average=None)
+    print("Recall : ", recall)
+    # recallScores.append(recall)
+
+    f1 = f1_score(y_test, y_predict, average=None)
+    print("F1 : ", f1)
+    # f1Scores.append(f1)
+
+    roc = roc_auc_score(y_test, y_predict, average=None)
+    print("ROC : ", roc)
+    # roc_aucScores.append(roc)
 
     fold += 1
+
 print("------------------------------------------------------------------------------")
-print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
+# print("Precision : %.2f%% (+/- %.2f%%)" % (np.mean(precisionScores)*100, np.std(precisionScores)*100))
+# print("Recall : ",%.2f%% (+/- %.2f%%)" % (np.mean(recallScores)*100, np.std(recallScores)*100))
+# print("F1 : %.2f%% (+/- %.2f%%)" % (np.mean(f1Scores)*100, np.std(f1Scores)*100))
+# print("ROC : %.2f%% (+/- %.2f%%)" % (np.mean(roc_aucScores)*100, np.std(roc_aucScores)*100))
 
+# acc = 0
+# for i in range(y_predict.shape[0]):
+#     if y_predict[i] == y_test[i]:
+#         acc += 1
 
-'''
-embeddings_index = dict()
-f = open('./glove.twitter.27B/glove.twitter.27B.200d.txt')
-for line in f:
-    values = line.split()
-    word = values[0]
-    coefs = np.asarray(values[1:], dtype='float32')
-    embeddings_index[word] = coefs
-f.close()
-print('Loaded %s word vectors.' % len(embeddings_index))
-
-print(tokenizer.word_index.items())
-
-# create a weight matrix for words in training docs
-embedding_matrix = np.zeros((vocabulary_size, 200))
-for word, index in tokenizer.word_index.items():
-    embedding_vector = embeddings_index.get(word)
-    if embedding_vector is not None:
-        embedding_matrix[index] = embedding_vector
-
-model_glove = Sequential()
-model_glove.add(Embedding(vocabulary_size, 200, input_length=50, weights=[embedding_matrix], trainable=True))
-model_glove.add(Dropout(0.2))
-model_glove.add(Conv1D(64, 5, activation='relu'))
-model_glove.add(MaxPooling1D(pool_size=4))
-model_glove.add(LSTM(200))
-model_glove.add(Dense(1, activation='sigmoid'))
-model_glove.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-# model_glove.fit(data, np.array(labels), validation_split=0.3, epochs = 20)
-'''
+# print(acc/y_predict.shape[0])
