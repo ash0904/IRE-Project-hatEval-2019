@@ -1,5 +1,5 @@
 ## Hate speech Detection against immigrants and women in tweets
-                               **SemEval19: hatEval**
+                                          SemEval19: hatEval
 
 ## Introduction
 Hate Speech is commonly defined as any communication that disparages a person or a group on the basis of some characteristic such as race, color, ethnicity, gender, sexual orientation, nationality, religion, or other characteristics. Given the huge amount of user-generated contents on the Web, and in particular on social media, the problem of detecting, and therefore possibly limit the Hate Speech diffusion, is becoming fundamental, for instance for fighting against misogyny and xenophobia.
@@ -20,8 +20,8 @@ We registered for participating in the [Semeval contest 2019](https://competitio
 [Link to the dataset](https://github.com/ash0904/IRE-Project-hatEval-2019/tree/master/public_development_en)
 
 #### Details
-..* 8100 tweets for training
-..* 900 tweets for testing.
-..* Nearly 3700 tweets contained hate
+* 8100 tweets for training
++ 900 tweets for testing.
++ Nearly 3700 tweets contained hate
 
 
