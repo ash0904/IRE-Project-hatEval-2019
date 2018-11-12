@@ -1,9 +1,5 @@
 # IRE-Project-hatEval-2019
-The repository contains all the submission materials of hatEval-2019. The aim of the project was to detect the hate speech towards the target (Women and Immigrants) and aggresive behaviour towrds them. The details of the project is available in project website.
-
-[Competition](https://competitions.codalab.org/competitions/19935)
-
-[Project Website](https://ash0904.github.io/IRE-Project-hatEval-2019/)
+The repository contains all the submission materials of [hatEval-2019](https://competitions.codalab.org/competitions/19935). The aim of the project was to detect the hate speech towards the target (Women and Immigrants) and aggresive behaviour towrds them. The details of the project is available in [project website](https://ash0904.github.io/IRE-Project-hatEval-2019/).
 
 [Resource Document](https://docs.google.com/document/d/1wKidmIkbNhfa_5swKL0XhZh24O68V3xxuKVHVrMwJVM/edit)
 
