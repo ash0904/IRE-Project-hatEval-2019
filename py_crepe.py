@@ -3,6 +3,7 @@ from keras.optimizers import SGD, Adam
 from keras.layers import Input, Dense, Dropout, Flatten, Lambda, Embedding
 from keras.layers.convolutional import Convolution1D, MaxPooling1D
 from keras.initializers import RandomNormal
+from keras.engine import Layer, InputSpec
 
 
 def create_model(filter_kernels, dense_outputs, maxlen, vocab_size, nb_filter, cat_output):
@@ -36,25 +37,37 @@ def create_model(filter_kernels, dense_outputs, maxlen, vocab_size, nb_filter, c
     # All the convolutional layers...
     conv = Convolution1D(filters=nb_filter, kernel_size=filter_kernels[0], kernel_initializer=initializer,
                          padding='valid', activation='relu',
-                         input_shape=(maxlen, vocab_size))(embedded)
-    conv = MaxPooling1D(pool_size=3)(conv)
+                         input_shape=(maxlen, vocab_size), name='Conv1')(embedded)
+    conv = MaxPooling1D(pool_size=3, name='MaxPool1')(conv)
 
     conv1 = Convolution1D(filters=nb_filter, kernel_size=filter_kernels[1], kernel_initializer=initializer,
-                          padding='valid', activation='relu')(conv)
-    conv1 = MaxPooling1D(pool_size=3)(conv1)
+                          padding='valid', activation='relu', name='Conv2')(conv)
+    conv1 = MaxPooling1D(pool_size=3, name='MaxPool2')(conv1)
 
     conv2 = Convolution1D(filters=nb_filter, kernel_size=filter_kernels[2], kernel_initializer=initializer,
-                          padding='valid', activation='relu')(conv1)
+                          padding='valid', activation='relu', name='Conv3')(conv1)
 
     conv3 = Convolution1D(filters=nb_filter, kernel_size=filter_kernels[3], kernel_initializer=initializer,
-                          padding='valid', activation='relu')(conv2)
+                          padding='valid', activation='relu', name='Conv4')(conv2)
 
     conv4 = Convolution1D(filters=nb_filter, kernel_size=filter_kernels[4], kernel_initializer=initializer,
-                          padding='valid', activation='relu')(conv3)
+                          padding='valid', activation='relu', name='Conv5')(conv3)
 
     conv5 = Convolution1D(filters=nb_filter, kernel_size=filter_kernels[5], kernel_initializer=initializer,
-                          padding='valid', activation='relu')(conv4)
-    conv5 = MaxPooling1D(pool_size=3)(conv5)
+                          padding='valid', activation='relu',  name='Conv6')(conv4)
+    conv5 = MaxPooling1D(pool_size=3,  name='MaxPool3')(conv5)
+    k = 40
+    # K-max pooling
+    def kmax_outshape(in_shape):
+        return (in_shape[0], in_shape[2]*k)
+    def KMaxPooling(inputs):        
+        # swap last two dimensions since top_k will be applied along the last dimension
+        shifted_input = tf.transpose(inputs, [0, 2, 1])
+        # extract top_k, returns two tensors [values, indices]
+        top_k = tf.nn.top_k(shifted_input, k=k, sorted=True, name='TopK')[0]
+        return top_k
+
+    # conv5 = Lambda(KMaxPooling, output_shape=kmax_outshape)(conv5)
     conv5 = Flatten()(conv5)
 
     # Two dense layers with dropout of .5
@@ -65,7 +78,7 @@ def create_model(filter_kernels, dense_outputs, maxlen, vocab_size, nb_filter, c
     pred = Dense(cat_output, activation='softmax', name='output')(z)
 
     model = Model(inputs=inputs, outputs=pred)
-
+    print(model.summary())
     sgd = SGD(lr=0.01, momentum=0.9)
     adam = Adam(lr=0.001)  # Feel free to use SGD above. I found Adam with lr=0.001 is faster than SGD with lr=0.01
     model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])

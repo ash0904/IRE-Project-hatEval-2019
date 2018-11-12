@@ -14,14 +14,14 @@ import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer, PorterStemmer
 from nltk.tokenize import TweetTokenizer
-from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score, roc_auc_score
 from sklearn.externals import joblib
 
 import py_crepe
 
 from keras.utils.np_utils import to_categorical
 from keras.models import load_model
-
+from keras.callbacks import ModelCheckpoint
 # In[31]:
 
 
@@ -88,22 +88,22 @@ def processTweet(tweet, remove_swords = True, remove_url = True, remove_hashtags
 def load_ag_data():
     train = pd.read_csv('public_development_en/train_en.tsv', delimiter='\t', encoding='utf-8')
     train = train.dropna()
-    # train = train.loc[train['HS'] == 1]
+    train = train.loc[train['HS'] == 1]
 
     x_train = train['text'].map(lambda x: processTweet(x, remove_swords = False, remove_url = True, 
                                 remove_hashtags = False, remove_num = True, stem_tweet = False))
     x_train = np.array(x_train)
 
-    y_train = train['HS']
+    y_train = train['TR']
     y_train = to_categorical(y_train)
 
     test = pd.read_csv('public_development_en/dev_en.tsv', delimiter='\t', encoding='utf-8')
-    # test = test.loc[test['HS'] == 1]
+    test = test.loc[test['HS'] == 1]
     x_test = test['text'].map(lambda x: processTweet(x, remove_swords = False, remove_url = True, 
                                 remove_hashtags = False, remove_num = True, stem_tweet = False))
     x_test = np.array(x_test)
 
-    y_test = test['HS']
+    y_test = test['TR']
     y_test = to_categorical(y_test)
 
     return (x_train, y_train), (x_test, y_test)
@@ -164,7 +164,7 @@ model_name_path = 'params/crepe_model.json'
 model_weights_path = 'params/crepe_model_weights.h5'
 
 # Maximum length. Longer gets chopped. Shorter gets padded.
-maxlen = 1014
+maxlen = 512
 
 # Model params
 # Filters for conv layers
@@ -193,24 +193,22 @@ x_test = encode_data(x_test, maxlen, vocab)
 
 
 # In[41]:
+filepath="./weights-best.h5"
+# checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, 
+#             save_best_only=True, mode='max', save_weights_only=True)
+# callbacks_list = [checkpoint]
+# model.fit(x_train, y_train,
+#           validation_data=(x_test, y_test), batch_size=batch_size, 
+#           epochs=nb_epoch, shuffle=True, callbacks=callbacks_list)
 
-
-model.fit(x_train, y_train,
-          validation_data=(x_test, y_test), batch_size=batch_size, epochs=nb_epoch, shuffle=True)
-
+model.load_weights(filepath)
 
 y_predict = model.predict(x_test, batch_size=None, steps=None)
 
 y_predict = np.argmax(y_predict, axis=1)
 y_test = np.argmax(y_test, axis=1)
 
-print(precision_score(y_test, y_predict, average=None))
-print(recall_score(y_test, y_predict, average=None))
-print(f1_score(y_test, y_predict, average=None))
-print(roc_auc_score(y_test, y_predict, average=None))
-# acc = 0
-# for i in range(y_predict.shape[0]):
-#     if y_predict[i] == y_test[i]:
-#         acc += 1
-
-# print(acc/y_predict.shape[0])
+print("Precision\t", precision_score(y_test, y_predict, average=None))
+print("Recall   \t", recall_score(y_test, y_predict, average=None))
+print("F1-Score \t", f1_score(y_test, y_predict, average=None))
+print("ROC-AUC  \t", roc_auc_score(y_test, y_predict, average=None))
