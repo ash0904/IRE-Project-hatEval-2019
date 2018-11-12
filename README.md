@@ -3,6 +3,9 @@ The repository contains all the submission materials of [hatEval-2019](https://c
 
 [Resource Document](https://docs.google.com/document/d/1wKidmIkbNhfa_5swKL0XhZh24O68V3xxuKVHVrMwJVM/edit)
 
-[Report](https://docs.google.com/document/d/11BiV8JceusuAu4oxQS3dF-6KFdXlQg-w-jbZJiMngHo/edit?usp=sharing)
+* [Report](https://docs.google.com/document/d/11BiV8JceusuAu4oxQS3dF-6KFdXlQg-w-jbZJiMngHo/edit?usp=sharing)
 
-[PPT](https://docs.google.com/presentation/d/10Q_plGapn0AuLIuTYmZMvMjBju2GhYVCxOWcKBs4oYQ/edit?fbclid=IwAR0qcB3yePUySBIon2UV8lwA4rezuwMmdAnf2OPNfPmOQxtpa3dqaBtTyW0#slide=id.g1f87997393_0_782)
+* [PPT](https://docs.google.com/presentation/d/10Q_plGapn0AuLIuTYmZMvMjBju2GhYVCxOWcKBs4oYQ/edit?fbclid=IwAR0qcB3yePUySBIon2UV8lwA4rezuwMmdAnf2OPNfPmOQxtpa3dqaBtTyW0#slide=id.g1f87997393_0_782)
+
+
+This project is developed by [Chitra](https://github.com/ChitraMP), [Harshit](https://github.com/ash0904) and [Ranajit](https://github.com/rnjtsh)
