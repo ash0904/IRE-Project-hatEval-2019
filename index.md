@@ -48,7 +48,14 @@ We found that the accuracy of various models change when we use the above functi
 3. **Character level CNN :-** The next model we tried was character based CNN since texts in tweet corpus is a bit different than any other regular text corpus. In tweets, word shorthands e.g. ‘FYKI’ instead of ‘for your kind information’, repeating characters e.g. ‘yaaayyyyyy’ to express feelings, emoticons using symbols etc are used. These are not general English words and these usages may differ from person to person. As for example, ‘yaaaayyyyy’ and ‘yaayyy’ both are the same word. So character level model would work better than word level model. 
 In this approach, we came up with the idea of embedding the characters of the words and then pass it through the CNN network.
     + The model accepts a sequence of encoded characters as input. The encoding is done by prescribing an alphabet of size m for the input language, and then quantize each character using 1-of-m encoding (or “one-hot” encoding). Then, the sequence of characters is transformed to a sequence of such m sized vectors with fixed length l0. Any character exceeding length l0 is ignored, and any characters that are not in the alphabet including blank characters are quantized as all-zero vectors. The character quantization order is backward so that the latest reading on characters is always placed near the begin of the output, making it easy for fully connected layers to associate weights with the latest reading.
+======
     ![CNN for language](https://raw.githubusercontent.com/ash0904/Algorithms/master/images/cnn1.png)
     + The alphabet used in all of our models consists of 70 characters, including 26 english letters, 10 digits, 33 other characters and the new line character. The non-space characters are: abcdefghijklmnopqrstuvwxyz0123456789 -,;.!?:’’’/\|@#$%ˆ&˜‘+-=<>()[]{}
-    + The embeddings are then passed to the CNN network whose architecture is described below. We also insert 2 dropout modules in between the 3 fully-connected layers to regularize. They have dropout probability of 0.5.     
+    + The embeddings are then passed to the CNN network whose architecture is described below. We also insert 2 dropout modules in between the 3 fully-connected layers to regularize. They have dropout probability of 0.5.
+=======
     ![Model Archietecture](https://raw.githubusercontent.com/ash0904/Algorithms/master/images/model1.png)
+
+## Evaluation Metric
+
+    ![Evaluation Metric](https://raw.githubusercontent.com/ash0904/Algorithms/master/images/evaluation.png)
+
