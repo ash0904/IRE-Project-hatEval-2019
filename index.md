@@ -56,6 +56,5 @@ In this approach, we came up with the idea of embedding the characters of the wo
     ![Model Archietecture](https://raw.githubusercontent.com/ash0904/Algorithms/master/images/model1.png)
 
 ## Evaluation Metric
-
-    ![Evaluation Metric](https://raw.githubusercontent.com/ash0904/Algorithms/master/images/evaluation.png)
+![Evaluation Metric](https://raw.githubusercontent.com/ash0904/Algorithms/master/images/evaluation.png)
 
