@@ -58,3 +58,4 @@ In this approach, we came up with the idea of embedding the characters of the wo
 ## Evaluation Metric
 ![Evaluation Metric](https://raw.githubusercontent.com/ash0904/Algorithms/master/images/evaluation.png)
 
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=ssQXQfOLSeo" target="_blank"><img src="http://img.youtube.com/vi/ssQXQfOLSeo/0.jpg" alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
